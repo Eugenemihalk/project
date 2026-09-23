@@ -1,21 +1,9 @@
-const documentModel = require('../models/documentModel');
+const { Document } = require('../models');
 
 function createError(message, status) {
   const error = new Error(message);
   error.status = status;
   return error;
-}
-
-function validateDocumentBody(body) {
-  if (!body || typeof body.title !== 'string' || !body.title.trim()) {
-    return 'Поле title обязательно и должно быть непустой строкой';
-  }
-
-  if (typeof body.content !== 'string' || !body.content.trim()) {
-    return 'Поле content обязательно и должно быть непустой строкой';
-  }
-
-  return null;
 }
 
 function getDocumentId(value) {
@@ -32,50 +20,67 @@ function validateId(value) {
 }
 
 function validateBody(body) {
-  const validationError = validateDocumentBody(body);
-  if (validationError) {
-    throw createError(validationError, 400);
+  if (!body || typeof body.title !== 'string' || !body.title.trim()) {
+    throw createError('Поле title обязательно и должно быть непустой строкой', 400);
+  }
+
+  if (typeof body.content !== 'string' || !body.content.trim()) {
+    throw createError('Поле content обязательно и должно быть непустой строкой', 400);
   }
 }
 
-function getAllDocuments(req, res) {
-  res.json(documentModel.getAllDocuments());
+function getDocumentData(body) {
+  const data = {
+    title: body.title.trim(),
+    content: body.content,
+  };
+
+  if (body.status !== undefined) {
+    data.status = body.status;
+  }
+
+  return data;
 }
 
-function getDocumentById(req, res) {
+async function getAllDocuments(req, res) {
+  const documents = await Document.findAll({ order: [['id', 'ASC']] });
+  res.json(documents);
+}
+
+async function getDocumentById(req, res) {
   const id = validateId(req.params.id);
-  const document = documentModel.findDocumentById(id);
+  const document = await Document.findByPk(id);
   if (!document) {
     throw createError('Документ не найден', 404);
   }
   res.json(document);
 }
 
-function createDocument(req, res) {
+async function createDocument(req, res) {
   validateBody(req.body);
-  const document = documentModel.createDocument({
-    title: req.body.title.trim(),
-    content: req.body.content,
-  });
+  const document = await Document.create(getDocumentData(req.body));
   res.status(201).json(document);
 }
 
-function updateDocument(req, res) {
+async function updateDocument(req, res) {
   const id = validateId(req.params.id);
   validateBody(req.body);
-  const document = documentModel.updateDocument(id, {
-    title: req.body.title.trim(),
-    content: req.body.content,
+
+  const [updatedCount] = await Document.update(getDocumentData(req.body), {
+    where: { id },
   });
-  if (!document) {
+  if (updatedCount === 0) {
     throw createError('Документ не найден', 404);
   }
+
+  const document = await Document.findByPk(id);
   res.json(document);
 }
 
-function deleteDocument(req, res) {
+async function deleteDocument(req, res) {
   const id = validateId(req.params.id);
-  if (!documentModel.deleteDocument(id)) {
+  const deletedCount = await Document.destroy({ where: { id } });
+  if (deletedCount === 0) {
     throw createError('Документ не найден', 404);
   }
   res.status(204).send();
