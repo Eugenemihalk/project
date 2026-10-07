@@ -1,11 +1,20 @@
+require('dotenv').config({ quiet: true });
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  throw new Error('Задайте JWT_SECRET длиной не менее 32 символов');
+}
 const express = require('express');
 const documentRoutes = require('./routes/documents');
 const { sequelize } = require('./models');
+const authRoutes = require('./routes/auth');
+const { auth } = require('./middleware/auth');
+const { profile } = require('./controllers/authController');
 
 const app = express();
-const port = 7000;
+const port = process.env.PORT || 7000;
 
 app.use(express.json());
+app.use('/auth', authRoutes);
+app.get('/profile', auth, profile);
 app.use('/documents', documentRoutes);
 
 app.use((error, req, res, next) => {
@@ -16,8 +25,8 @@ app.use((error, req, res, next) => {
   const isValidationError = error.name === 'SequelizeValidationError';
   const status = error.status === 400 || error.type === 'entity.parse.failed' || isValidationError
     ? 400
-    : error.status === 404
-      ? 404
+    : [401, 403, 404, 409, 413].includes(error.status)
+      ? error.status
       : 500;
   const message = status === 400 && error.type === 'entity.parse.failed'
     ? 'Некорректный JSON в теле запроса'
