@@ -1,95 +1,33 @@
-const { Document } = require('../models');
+const documents = require('../data/documents');
 
-function createError(message, status) {
-  const error = new Error(message);
-  error.status = status;
-  return error;
+function index(req, res) {
+  res.render('index', { title: 'Документы команды', documents });
 }
 
-function getDocumentId(value) {
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : null;
+function item(req, res, next) {
+  const document = documents.find((entry) => String(entry.id) === req.params.id);
+  if (!document) return next();
+
+  res.render('item', { title: document.title, document });
 }
 
-function validateId(value) {
-  const id = getDocumentId(value);
-  if (id === null) {
-    throw createError('ID документа должен быть положительным целым числом', 400);
-  }
-  return id;
+function addForm(req, res) {
+  res.render('add', { title: 'Добавить документ', user: req.user, error: null, values: {} });
 }
 
-function validateBody(body) {
-  if (!body || typeof body.title !== 'string' || !body.title.trim()) {
-    throw createError('Поле title обязательно и должно быть непустой строкой', 400);
-  }
-
-  if (typeof body.content !== 'string' || !body.content.trim()) {
-    throw createError('Поле content обязательно и должно быть непустой строкой', 400);
-  }
-}
-
-function getDocumentData(body) {
-  const data = {
-    title: body.title.trim(),
-    content: body.content,
-  };
-
-  if (body.status !== undefined) {
-    data.status = body.status;
+function add(req, res) {
+  const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+  const content = typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+  if (!title || !content) {
+    return res.status(400).render('add', {
+      title: 'Добавить документ', user: req.user,
+      error: 'Заполните название и содержимое документа.', values: { title, content },
+    });
   }
 
-  return data;
+  const id = documents.reduce((max, document) => Math.max(max, document.id), 0) + 1;
+  documents.push({ id, title, content });
+  res.redirect('/');
 }
 
-async function getAllDocuments(req, res) {
-  const documents = await Document.findAll({ order: [['id', 'ASC']] });
-  res.json(documents);
-}
-
-async function getDocumentById(req, res) {
-  const id = validateId(req.params.id);
-  const document = await Document.findByPk(id);
-  if (!document) {
-    throw createError('Документ не найден', 404);
-  }
-  res.json(document);
-}
-
-async function createDocument(req, res) {
-  validateBody(req.body);
-  const document = await Document.create(getDocumentData(req.body));
-  res.status(201).json(document);
-}
-
-async function updateDocument(req, res) {
-  const id = validateId(req.params.id);
-  validateBody(req.body);
-
-  const [updatedCount] = await Document.update(getDocumentData(req.body), {
-    where: { id },
-  });
-  if (updatedCount === 0) {
-    throw createError('Документ не найден', 404);
-  }
-
-  const document = await Document.findByPk(id);
-  res.json(document);
-}
-
-async function deleteDocument(req, res) {
-  const id = validateId(req.params.id);
-  const deletedCount = await Document.destroy({ where: { id } });
-  if (deletedCount === 0) {
-    throw createError('Документ не найден', 404);
-  }
-  res.status(204).send();
-}
-
-module.exports = {
-  getAllDocuments,
-  getDocumentById,
-  createDocument,
-  updateDocument,
-  deleteDocument,
-};
+module.exports = { index, item, addForm, add };

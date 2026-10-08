@@ -1,14 +1,11 @@
-const express = require('express');
-const documentsController = require('../controllers/documentsController');
-const { auth, isAdmin } = require('../middleware/auth');
+const router = require('express').Router();
+const controller = require('../controllers/documentsController');
+const auth = require('../middleware/auth');
 
-const router = express.Router();
-router.use(auth);
-
-router.get('/', documentsController.getAllDocuments);
-router.get('/:id', documentsController.getDocumentById);
-router.post('/', documentsController.createDocument);
-router.put('/:id', documentsController.updateDocument);
-router.delete('/:id', isAdmin, documentsController.deleteDocument);
+router.get('/', controller.index);
+router.get('/item/:id', controller.item);
+router.get('/add', auth, controller.addForm);
+router.post('/add', auth, controller.add);
+router.get('/login', (req, res) => res.render('login', { title: 'Учебная авторизация' }));
 
 module.exports = router;

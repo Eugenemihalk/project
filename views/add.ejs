@@ -1,0 +1,10 @@
+<%- include('partials/header') %>
+<h1>Добавить документ</h1>
+<p>Пользователь: <%= user.name %></p>
+<% if (error) { %><p role="alert"><%= error %></p><% } %>
+<form action="/add?auth=1" method="post">
+  <p><label>Название<br><input name="title" value="<%= values.title || '' %>" required></label></p>
+  <p><label>Содержимое<br><textarea name="content" rows="8" cols="50" required><%= values.content || '' %></textarea></label></p>
+  <button type="submit">Добавить</button>
+</form>
+<%- include('partials/footer') %>

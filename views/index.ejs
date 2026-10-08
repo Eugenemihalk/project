@@ -1,0 +1,12 @@
+<%- include('partials/header') %>
+<h1>Документы команды</h1>
+<% if (documents.length === 0) { %>
+  <p>Документов пока нет.</p>
+<% } else { %>
+  <ul>
+    <% documents.forEach((document) => { %>
+      <li><a href="/item/<%= document.id %>"><%= document.title %></a></li>
+    <% }); %>
+  </ul>
+<% } %>
+<%- include('partials/footer') %>
